@@ -44,6 +44,9 @@
           <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
           <span class="storage-text" id="storageText">0 / 0 MB</span>
         </div>
+        <button class="btn-icon" id="networkToggle" title="Ağ Sürücüsü">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
         <button class="btn-icon" id="themeToggle" title="Tema değiştir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
         </button>
@@ -86,6 +89,10 @@
             <button class="btn btn-secondary" id="newFolderBtnMain">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               Yeni Klasör
+            </button>
+            <button class="btn btn-secondary" id="receiveBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 15 16 10 5 21"></polyline><path d="M12 2v20"></path><polyline points="5 7 12 14 19 7"></polyline></svg>
+              Dosya Al
             </button>
           </div>
           <div class="toolbar-right">
@@ -180,6 +187,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
             Ağa Gönder
           </button>
+          <button class="btn btn-ghost" id="shareBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            Paylaş
+          </button>
           <button class="btn btn-ghost btn-danger" id="deleteBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/></svg>
             Sil
@@ -230,6 +241,39 @@
       <div class="modal-footer">
         <button class="btn btn-ghost" id="cancelRename">İptal</button>
         <button class="btn btn-primary" id="confirmRename">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="receiveModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Dosya Al</h2>
+        <button class="btn-icon" id="closeReceiveModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <label for="receiveUrl">Dosya Linki veya ID</label>
+        <input type="text" id="receiveUrl" placeholder="https://… veya dosya adi" autocomplete="off" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelReceive">İptal</button>
+        <button class="btn btn-primary" id="confirmReceive">Dosyayı Al</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="shareModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Dosyayı Paylaş</h2>
+        <button class="btn-icon" id="closeShareModal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Bu linki kopyalayıp başkalarına göndererek dosyayı paylaşabilirsiniz:</p>
+        <input type="text" id="shareLinkInput" readonly style="cursor: copy;" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="copyShareLinkBtn">Kopyala</button>
       </div>
     </div>
   </div>

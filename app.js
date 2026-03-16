@@ -209,19 +209,29 @@ function flatFiles(node) {
 document.querySelectorAll('.dt-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const mode = btn.dataset.mode;
-    if (mode === STATE.driveMode) return;
-    STATE.driveMode = mode;
-    document.querySelectorAll('.dt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-
-    if (mode === 'network') {
-      document.getElementById('networkView').style.display = 'flex';
-      document.getElementById('mainContent').style.display = 'none';
-      loadNetworkFiles();
-    } else {
-      document.getElementById('networkView').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'flex';
-    }
+    setDriveMode(mode);
   });
+});
+
+function setDriveMode(mode) {
+  if (mode === STATE.driveMode) return;
+  STATE.driveMode = mode;
+  document.querySelectorAll('.dt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('networkToggle').classList.toggle('active', mode === 'network');
+
+  if (mode === 'network') {
+    document.getElementById('networkView').style.display = 'flex';
+    document.getElementById('mainContent').style.display = 'none';
+    loadNetworkFiles();
+  } else {
+    document.getElementById('networkView').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'flex';
+  }
+}
+
+document.getElementById('networkToggle').addEventListener('click', () => {
+  const nextMode = STATE.driveMode === 'local' ? 'network' : 'local';
+  setDriveMode(nextMode);
 });
 
 /* ============================================================
@@ -574,6 +584,108 @@ document.getElementById('pushToNetworkBtn').addEventListener('click', async () =
     navigator.clipboard.writeText(url).catch(() => {});
   } catch (e) {
     showToast('Gönderilemedi: ' + e.message, 'error');
+  }
+});
+
+/* ============================================================
+   SHARE & RECEIVE (Direct Transfer)
+   ============================================================ */
+document.getElementById('shareBtn').addEventListener('click', async () => {
+  const [node] = findNodeById(STATE.selectedId);
+  if (!node || node.type !== 'file') return;
+
+  if (node.networkUrl) {
+    openShareModal(node.networkUrl);
+    return;
+  }
+
+  showToast(`"${node.name}" paylaşım için hazırlanıyor…`, 'success');
+  try {
+    const res = await fetch(node.dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], node.name, { type: node.mime || blob.type });
+    const url = await supabaseUpload(file);
+    node.networkUrl = url; // Cache the URL
+    openShareModal(url);
+  } catch (e) {
+    showToast('Paylaşılamadı: ' + e.message, 'error');
+  }
+});
+
+function openShareModal(url) {
+  document.getElementById('shareLinkInput').value = url;
+  document.getElementById('shareModal').classList.add('open');
+}
+
+document.getElementById('closeShareModal').addEventListener('click', () => {
+  document.getElementById('shareModal').classList.remove('open');
+});
+
+document.getElementById('copyShareLinkBtn').addEventListener('click', () => {
+  const input = document.getElementById('shareLinkInput');
+  input.select();
+  document.execCommand('copy');
+  showToast('Link kopyalandı!', 'success');
+  document.getElementById('shareModal').classList.remove('open');
+});
+
+document.getElementById('receiveBtn').addEventListener('click', () => {
+  document.getElementById('receiveUrl').value = '';
+  document.getElementById('receiveModal').classList.add('open');
+  setTimeout(() => document.getElementById('receiveUrl').focus(), 50);
+});
+
+document.getElementById('closeReceiveModal').addEventListener('click', () => {
+  document.getElementById('receiveModal').classList.remove('open');
+});
+
+document.getElementById('cancelReceive').addEventListener('click', () => {
+  document.getElementById('receiveModal').classList.remove('open');
+});
+
+document.getElementById('confirmReceive').addEventListener('click', async () => {
+  const urlOrId = document.getElementById('receiveUrl').value.trim();
+  if (!urlOrId) return;
+
+  document.getElementById('receiveModal').classList.remove('open');
+  showToast('Dosya alınıyor…', 'success');
+
+  try {
+    let url = urlOrId;
+    // Eğer sadece isim/ID ise Supabase shared klasöründe aramaya çalış (opsiyonel geliştirme)
+    if (!urlOrId.startsWith('http')) {
+      const allFiles = await supabaseListFiles();
+      const match = allFiles.find(f => f.name === urlOrId || f.id === urlOrId);
+      if (match) url = match.url;
+      else throw new Error('Dosya bulunamadı');
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Dosya indirilemedi');
+    const blob = await res.blob();
+    
+    // Extract name from URL if possible
+    let name = url.split('/').pop().replace(/^\d+_/, '');
+    if (!name || name.length > 50) name = 'Alınan Dosya';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const folder = getCurrentFolder();
+      const node = {
+        id: uuid(), name: name, type: 'file',
+        mime: blob.type || '', size: blob.size,
+        dataUrl: e.target.result,
+        created: new Date().toISOString(), modified: new Date().toISOString(),
+      };
+      folder.children = folder.children || [];
+      folder.children.push(node);
+      saveFS(); renderTree(); renderBreadcrumb(); renderFiles(); updateStorageBar();
+      showToast(`"${name}" başarıyla alındı!`, 'success');
+    };
+    reader.readAsDataURL(blob);
+
+  } catch (e) {
+    showToast('Dosya alınamadı: ' + e.message, 'error');
   }
 });
 
