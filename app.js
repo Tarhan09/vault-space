@@ -7,7 +7,7 @@
 /* ============================================================
    SUPABASE CONFIG
    ============================================================ */
-const SUPABASE_URL = 'https://kcmatuufohyhkrwexfyq.supabase.co';
+const SUPABASE_URL = 'https://kcmatuufohhykrwexfyq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjbWF0dXVmb2hoeWtyd2V4ZnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NDY2NTEsImV4cCI6MjA4OTEyMjY1MX0.tJnLIeA44-1cJT1ZNHzjdpk9KzyoJ9ucIShfD_6O8Rk';
 const BUCKET = 'files';
 
