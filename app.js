@@ -12,28 +12,34 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const BUCKET = 'files';
 
 async function supabaseUpload(file) {
-  const path = `shared/${Date.now()}_${file.name}`;
+  const safeName = sanitizeFilename(file.name);
+  const path = `shared/${Date.now()}_${safeName}`;
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
     method: 'POST',
     headers: {
+      'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': file.type || 'application/octet-stream',
       'x-upsert': 'true',
     },
     body: file,
   });
-  if (!res.ok) throw new Error('Yükleme başarısız');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
   return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
 async function supabaseListFiles() {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}/shared`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
     method: 'POST',
     headers: {
+      'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ limit: 100, offset: 0, sortBy: { column: 'created_at', order: 'desc' } }),
+    body: JSON.stringify({ prefix: 'shared', limit: 100, offset: 0, sortBy: { column: 'created_at', order: 'desc' } }),
   });
   if (!res.ok) return [];
   const data = await res.json();
@@ -52,6 +58,7 @@ async function supabaseDeleteFile(path) {
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}`, {
     method: 'DELETE',
     headers: {
+      'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
     },
@@ -79,6 +86,11 @@ const STATE = {
 /* ============================================================
    UTILS
    ============================================================ */
+function sanitizeFilename(name) {
+  const map = { 'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'C','Ğ':'G','İ':'I','Ö':'O','Ş':'S','Ü':'U', ' ':'_' };
+  return name.replace(/[çğıöşüÇĞİÖŞÜ ]/g, m => map[m]).replace(/[^a-zA-Z0-9.\-_]/g, '_');
+}
+
 function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -522,8 +534,14 @@ function showDetailPanel(node) {
   const body    = document.getElementById('detailBody');
   const actions = document.getElementById('detailActions');
   const pushBtn = document.getElementById('pushToNetworkBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const shareBtnMain = document.getElementById('shareBtnMain');
+  
   actions.style.display = 'flex';
-  pushBtn.style.display = node.type === 'file' ? 'block' : 'none';
+  const isFile = node.type === 'file';
+  pushBtn.style.display = isFile ? 'block' : 'none';
+  shareBtn.style.display = isFile ? 'block' : 'none';
+  if (shareBtnMain) shareBtnMain.style.display = isFile ? 'inline-flex' : 'none';
 
   const isImg   = mimeToCategory(node.mime, node.name) === 'image';
   const isVideo = mimeToCategory(node.mime, node.name) === 'video';
@@ -556,6 +574,8 @@ function clearDetailPanel() {
       <p>Bir dosya veya klasör seçin</p>
     </div>`;
   document.getElementById('detailActions').style.display = 'none';
+  const shareBtnMain = document.getElementById('shareBtnMain');
+  if (shareBtnMain) shareBtnMain.style.display = 'none';
 }
 
 document.getElementById('closeDetail').addEventListener('click', () => {
@@ -590,7 +610,7 @@ document.getElementById('pushToNetworkBtn').addEventListener('click', async () =
 /* ============================================================
    SHARE & RECEIVE (Direct Transfer)
    ============================================================ */
-document.getElementById('shareBtn').addEventListener('click', async () => {
+async function handleShareAction() {
   const [node] = findNodeById(STATE.selectedId);
   if (!node || node.type !== 'file') return;
 
@@ -610,7 +630,11 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
   } catch (e) {
     showToast('Paylaşılamadı: ' + e.message, 'error');
   }
-});
+}
+
+document.getElementById('shareBtn').addEventListener('click', handleShareAction);
+const shareBtnMain = document.getElementById('shareBtnMain');
+if (shareBtnMain) shareBtnMain.addEventListener('click', handleShareAction);
 
 function openShareModal(url) {
   document.getElementById('shareLinkInput').value = url;
@@ -826,8 +850,10 @@ function showContextMenu(x, y, node) {
   const mw = ctxMenu.offsetWidth || 160, mh = ctxMenu.offsetHeight || 150;
   ctxMenu.style.left = (x + mw > W ? x - mw : x) + 'px';
   ctxMenu.style.top  = (y + mh > H ? y - mh : y) + 'px';
-  document.getElementById('ctxDownload').style.display = node.type === 'file' ? 'block' : 'none';
-  document.getElementById('ctxPushNetwork').style.display = node.type === 'file' ? 'block' : 'none';
+  const isFile = node.type === 'file';
+  document.getElementById('ctxDownload').style.display = isFile ? 'block' : 'none';
+  document.getElementById('ctxPushNetwork').style.display = isFile ? 'block' : 'none';
+  document.getElementById('ctxShare').style.display = isFile ? 'block' : 'none';
 }
 
 function hideContextMenu() { ctxMenu.classList.remove('open'); }
@@ -842,6 +868,13 @@ document.getElementById('ctxPushNetwork').addEventListener('click', () => {
   if (STATE.ctxTarget) {
     STATE.selectedId = STATE.ctxTarget.id;
     document.getElementById('pushToNetworkBtn').click();
+  }
+});
+
+document.getElementById('ctxShare').addEventListener('click', () => {
+  if (STATE.ctxTarget) {
+    STATE.selectedId = STATE.ctxTarget.id;
+    handleShareAction();
   }
 });
 
